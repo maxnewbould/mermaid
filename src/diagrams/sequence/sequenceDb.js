@@ -3,6 +3,7 @@ import { logger } from '../../logger'
 let actors = {}
 let messages = []
 const notes = []
+const states = []
 let title = ''
 
 export const addActor = function (id, name, description) {
@@ -66,7 +67,8 @@ export const LINETYPE = {
   ACTIVE_END: 18,
   PAR_START: 19,
   PAR_AND: 20,
-  PAR_END: 21
+  PAR_END: 21,
+  STATE: 22
 }
 
 export const ARROWTYPE = {
@@ -88,6 +90,16 @@ export const addNote = function (actor, placement, message) {
 
   notes.push(note)
   messages.push({ from: actors[0], to: actors[1], message: message, type: LINETYPE.NOTE, placement: placement })
+}
+
+export const addState = function (actor, placement, message) {
+  const state = { actor: actor, placement: placement, message: message }
+
+  // Coerce actor into a [to, from, ...] array
+  const actors = [].concat(actor, actor)
+
+  states.push(state)
+  messages.push({ from: actors[0], to: actors[1], message: message, type: LINETYPE.STATE, placement: placement })
 }
 
 export const setTitle = function (titleText) {
@@ -115,6 +127,9 @@ export const apply = function (param) {
         break
       case 'addMessage':
         addSignal(param.from, param.to, param.msg, param.signalType)
+        break
+      case 'addState':
+        addState(param.actor, param.placement, param.text)
         break
       case 'loopStart':
         addSignal(undefined, undefined, param.loopText, param.signalType)
@@ -157,6 +172,7 @@ export default {
   addActor,
   addMessage,
   addSignal,
+  addState,
   getMessages,
   getActors,
   getActor,

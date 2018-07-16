@@ -16,6 +16,29 @@ export const drawRect = function (elem, rectData) {
   return rectElem
 }
 
+export const drawCenterText = function (elem, textData, width) {
+  // Remove and ignore br:s
+  // const nText = textData.text.replace(/<br\/?>/ig, ' ')
+
+  // const nText = textData.text.replace(/<br\/?>/ig, ' ')
+
+  const textElem = elem.append('text')
+  textElem.attr('x', textData.x)
+  textElem.attr('y', textData.y)
+  textElem.style('text-anchor', textData.anchor)
+  textElem.attr('fill', textData.fill)
+  if (typeof textData.class !== 'undefined') {
+    textElem.attr('class', textData.class)
+  }
+
+  const span = textElem.append('tspan')
+  span.attr('x', textData.x + textData.textMargin * 2)
+  span.attr('fill', textData.fill)
+  span.text(textData.text)
+
+  return textElem
+}
+
 export const drawText = function (elem, textData, width) {
   // Remove and ignore br:s
   const nText = textData.text.replace(/<br\/?>/ig, ' ')
@@ -212,6 +235,22 @@ export const insertArrowCrossHead = function (elem) {
   // this is actual shape for arrowhead
 }
 
+export const getCenterTextObj = function () {
+  const txt = {
+    x: 0,
+    y: 0,
+    'fill': 'black',
+    'text-anchor': 'middle',
+    style: '#666',
+    width: 100,
+    height: 100,
+    textMargin: 0,
+    rx: 0,
+    ry: 0
+  }
+  return txt
+}
+
 export const getTextObj = function () {
   const txt = {
     x: 0,
@@ -301,6 +340,7 @@ const _drawTextCandidateFunc = (function () {
 export default {
   drawRect,
   drawText,
+  drawCenterText,
   drawLabel,
   drawActor,
   anchorElement,
@@ -308,6 +348,7 @@ export default {
   drawLoop,
   insertArrowHead,
   insertArrowCrossHead,
+  getCenterTextObj,
   getTextObj,
   getNoteRect
 }

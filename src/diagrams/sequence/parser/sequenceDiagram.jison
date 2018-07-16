@@ -42,6 +42,7 @@
 "right of"        return 'right_of';
 "over"            return 'over';
 "note"            return 'note';
+"state"           return 'state';
 "activate"        { this.begin('ID'); return 'activate'; }
 "deactivate"      { this.begin('ID'); return 'deactivate'; }
 "title"           return 'title';
@@ -93,6 +94,7 @@ statement
 	| 'activate' actor 'NL' {$$={type: 'activeStart', signalType: yy.LINETYPE.ACTIVE_START, actor: $2};}
 	| 'deactivate' actor 'NL' {$$={type: 'activeEnd', signalType: yy.LINETYPE.ACTIVE_END, actor: $2};}
 	| note_statement 'NL'
+    | state_statement 'NL'
 	| title text2 'NL' {$$=[{type:'setTitle', text:$2}]}
 	| 'loop' restOfLine document end
 	{
@@ -132,6 +134,19 @@ else_sections
 	: document
 	| document else restOfLine else_sections
 	{ $$ = $1.concat([{type: 'else', altText:$3, signalType: yy.LINETYPE.ALT_ELSE}, $4]); }
+	;
+
+state_statement
+	: 'state' placement actor text2
+	{
+		$$ = [$3, {type:'addState', placement:$2, actor:$3.actor, text:$4}];}
+	| 'state' 'over' actor_pair text2
+	{
+		// Coerce actor_pair into a [to, from, ...] array
+		$2 = [].concat($3, $3).slice(0, 2);
+		$2[0] = $2[0].actor;
+		$2[1] = $2[1].actor;
+		$$ = [$3, {type:'addState', placement:yy.PLACEMENT.OVER, actor:$2.slice(0, 2), text:$4}];}
 	;
 
 note_statement

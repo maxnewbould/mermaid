@@ -153,8 +153,25 @@ export const bounds = {
     return this.data
   }
 }
+const _drawStateText = (text, x, y, g, width) => {
+  let textHeight = 0
+  const lines = text.split(/<br\/?>/ig)
+  for (const line of lines) {
+    const textObj = svgDraw.getCenterTextObj()
+    textObj.x = x
+    textObj.y = y + textHeight
+    textObj.textMargin = conf.noteMargin
+    textObj.dy = '1em'
+    textObj.text = line
+    textObj.class = 'stateText'
+    const textElem = svgDraw.drawCenterText(g, textObj, width)
+    textHeight += (textElem._groups || textElem)[0][0].getBBox().height
+  }
+  return textHeight
+}
 
-const _drawLongText = (text, x, y, g, width) => {
+const _drawLongText = (text, x, y, g, width, className) => {
+  if (className == null) className = 'noteText'
   let textHeight = 0
   const lines = text.split(/<br\/?>/ig)
   for (const line of lines) {
@@ -164,11 +181,39 @@ const _drawLongText = (text, x, y, g, width) => {
     textObj.textMargin = conf.noteMargin
     textObj.dy = '1em'
     textObj.text = line
-    textObj.class = 'noteText'
+    textObj.class = className
     const textElem = svgDraw.drawText(g, textObj, width)
     textHeight += (textElem._groups || textElem)[0][0].getBBox().height
   }
   return textHeight
+}
+/**
+ * Draws an actor in the diagram with the attaced line
+ * @param center - The center of the the actor
+ * @param pos The position if the actor in the liost of actors
+ * @param description The text in the box
+ */
+const drawState = function (elem, startx, verticalPos, msg, forceWidth) {
+  let g = elem.append('g')
+  const rect = svgDraw.getNoteRect()
+  rect.x = startx
+  rect.y = verticalPos
+  rect.width = forceWidth || conf.width
+  rect.class = 'state'
+  const rectElem = svgDraw.drawRect(g, rect)
+  const stateLabelRect = svgDraw.getNoteRect()
+  stateLabelRect.x = startx
+  stateLabelRect.y = verticalPos
+  stateLabelRect.width = 40
+  stateLabelRect.class = 'stateLabel'
+  const labelRectElem = svgDraw.drawRect(g, stateLabelRect)
+  const labelTextHeight = _drawLongText('state', startx - 16, verticalPos + 12, g, 40, 'stateLabelText')
+  labelRectElem.attr('height', labelTextHeight - 4)
+
+  const textHeight = _drawStateText(msg.message, startx + 48, verticalPos + 24, g, rect.width - conf.noteMargin)
+  bounds.insert(startx, verticalPos, startx + rect.width, verticalPos + 2 * conf.noteMargin + textHeight)
+  rectElem.attr('height', textHeight + 2 * conf.noteMargin)
+  bounds.bumpVerticalPos(textHeight + 2 * conf.noteMargin)
 }
 
 /**
@@ -187,7 +232,16 @@ const drawNote = function (elem, startx, verticalPos, msg, forceWidth) {
   let g = elem.append('g')
   const rectElem = svgDraw.drawRect(g, rect)
 
-  const textHeight = _drawLongText(msg.message, startx - 4, verticalPos + 24, g, rect.width - conf.noteMargin)
+  const noteLabelRect = svgDraw.getNoteRect()
+  noteLabelRect.x = startx
+  noteLabelRect.y = verticalPos
+  noteLabelRect.width = 40
+  noteLabelRect.class = 'noteLabel'
+  const labelRectElem = svgDraw.drawRect(g, noteLabelRect)
+  const labelTextHeight = _drawLongText('note', startx - 14, verticalPos + 12, g, 40, 'noteLabelText')
+  labelRectElem.attr('height', labelTextHeight - 4)
+
+  const textHeight = _drawLongText(msg.message, startx - 4, verticalPos + 32, g, rect.width - conf.noteMargin)
 
   bounds.insert(startx, verticalPos, startx + rect.width, verticalPos + 2 * conf.noteMargin + textHeight)
   rectElem.attr('height', textHeight + 2 * conf.noteMargin)
@@ -213,7 +267,7 @@ const drawMessage = function (elem, startx, stopx, verticalPos, msg) {
     .style('text-anchor', 'middle')
     .attr('class', 'messageText')
     .text(msg.message)
-
+  // console.dir(textElem)
   let textWidth = (textElem._groups || textElem)[0][0].getBBox().width
 
   let line
@@ -349,6 +403,26 @@ export const draw = function (text, id) {
   messages.forEach(function (msg) {
     let loopData
     switch (msg.type) {
+      case parser.yy.LINETYPE.STATE:
+        bounds.bumpVerticalPos(conf.boxMargin)
+
+        startx = actors[msg.from].x
+        stopx = actors[msg.to].x
+
+        if (msg.placement === parser.yy.PLACEMENT.RIGHTOF) {
+          drawState(diagram, startx + (conf.width + conf.actorMargin) / 2, bounds.getVerticalPos(), msg)
+        } else if (msg.placement === parser.yy.PLACEMENT.LEFTOF) {
+          drawState(diagram, startx - (conf.width + conf.actorMargin) / 2, bounds.getVerticalPos(), msg)
+        } else if (msg.to === msg.from) {
+          // Single-actor over
+          drawState(diagram, startx, bounds.getVerticalPos(), msg)
+        } else {
+          // Multi-actor over
+          forceWidth = Math.abs(startx - stopx) + conf.actorMargin
+          drawState(diagram, (startx + stopx + conf.width - forceWidth) / 2, bounds.getVerticalPos(), msg,
+            forceWidth)
+        }
+        break
       case parser.yy.LINETYPE.NOTE:
         bounds.bumpVerticalPos(conf.boxMargin)
 
